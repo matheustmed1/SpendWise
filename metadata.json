@@ -1,0 +1,6 @@
+{
+  "name": "Spend Wise Pro",
+  "description": "A powerful financial management tool with advanced budgeting, recurring transaction tracking, and detailed insights.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

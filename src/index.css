@@ -1,0 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-accent-50: color-mix(in srgb, var(--accent-color, #ff9f1c), white 95%);
+  --color-accent-100: color-mix(in srgb, var(--accent-color, #ff9f1c), white 90%);
+  --color-accent-200: color-mix(in srgb, var(--accent-color, #ff9f1c), white 70%);
+  --color-accent-300: color-mix(in srgb, var(--accent-color, #ff9f1c), white 50%);
+  --color-accent-400: color-mix(in srgb, var(--accent-color, #ff9f1c), white 20%);
+  --color-accent-500: var(--accent-color, #ff9f1c);
+  --color-accent-600: color-mix(in srgb, var(--accent-color, #ff9f1c), black 10%);
+  --color-accent-700: color-mix(in srgb, var(--accent-color, #ff9f1c), black 20%);
+  --color-accent-800: color-mix(in srgb, var(--accent-color, #ff9f1c), black 30%);
+  --color-accent-900: color-mix(in srgb, var(--accent-color, #ff9f1c), black 40%);
+  
+  --animate-spin-slow: spin 3s linear infinite;
+}
+
+@layer base {
+  body {
+    @apply bg-[#FFFBF5] text-[#1F1D17] font-sans antialiased transition-colors duration-300 selection:bg-accent-500 selection:text-[#FFFBF5];
+  }
+  
+  .dark body {
+    @apply bg-[#141412] text-[#F8F7F4] selection:bg-accent-500 selection:text-[#141412];
+  }
+}
+
+.glass-card {
+  @apply bg-white border border-black/5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-300 rounded-[2rem];
+}
+
+.dark .glass-card {
+  @apply bg-[#1C1C1A] border-white/5 shadow-none;
+}
+
+.minimal-input {
+  @apply bg-transparent border-b border-black/5 dark:border-white/5 focus:border-accent-500 outline-none transition-all duration-200 py-2;
+}
+
+.data-value {
+  @apply font-mono tracking-tighter;
+}
+
+.micro-label {
+  @apply font-mono text-[0.65rem] uppercase tracking-[0.15em] text-accent-500/80 font-bold;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.card-hover {
+  @apply hover:border-black/10 dark:hover:border-white/10 hover:shadow-sm transition-all duration-300;
+}
+
+.accent-glow {
+  @apply shadow-[0_0_20px_rgba(var(--accent-color-rgb,255,159,28),0.15)];
+}
