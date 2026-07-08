@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useMemo, FormEvent, ReactNode, DragEvent } from 'react';
+import { useAddEntry } from './hooks/useAddEntry';
 import { Plus, Trash2, Edit2, Wallet, CreditCard, Banknote, Calendar, Tag, ChevronRight, ChevronLeft, PieChart, ArrowUpRight, ArrowDownLeft, TrendingUp, Target, List, LineChart, Settings, PlusCircle, Activity, Bell, AlertTriangle, X, Search, Filter, Home, Sun, Moon, ChevronDown, Check, RefreshCw, Palette, LayoutDashboard, User, Sparkles, Lightbulb, Pin } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { InvestmentWizard } from './components/InvestmentWizard';
@@ -508,7 +509,7 @@ export default function App() {
 
   // Form state
   const [amount, setAmount] = useState('');
-  const [amountError, setAmountError] = useState('');
+  const { submitEntry, isSubmitting, error: submitError, amountError, setAmountError } = useAddEntry();
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
   const [account, setAccount] = useState<Account>('Bank');
@@ -6348,11 +6349,15 @@ export default function App() {
                     />
                   </div>
                 )}
+                {submitError && (
+                  <p className="mt-2 text-xs font-medium text-red-500">{submitError}</p>
+                )}
                 <button
                   type="submit"
-                  className="w-full py-4 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-2xl font-semibold shadow-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all active:scale-[0.98] mt-4"
+                  disabled={isSubmitting}
+                  className="w-full py-4 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-2xl font-semibold shadow-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all active:scale-[0.98] mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {editingEntryId ? t.save : t.addEntry}
+                  {isSubmitting ? '...' : (editingEntryId ? t.save : t.addEntry)}
                 </button>
               </form>
             </motion.div>

@@ -461,7 +461,8 @@ async function startServer() {
       frequency || null,
       nextOccurrence,
       isInstallment ? 1 : 0,
-      installmentsCount || 0
+      installmentsCount || 0,
+      tags ? JSON.stringify(tags) : '[]'
     );
     res.status(201).json({ success: true });
   });
@@ -499,6 +500,7 @@ async function startServer() {
       nextOccurrence,
       isInstallment ? 1 : 0,
       installmentsCount || 0,
+      tags ? JSON.stringify(tags) : '[]',
       id
     );
 
@@ -685,7 +687,7 @@ async function startServer() {
     const stmt = db.prepare(
       "UPDATE income SET amount = ?, source = ?, account = ?, date = ?, user = ?, isRecurring = ?, frequency = ?, nextOccurrence = ?, notes = ?, paymentMethod = ?, tags = ? WHERE id = ?"
     );
-    const result = stmt.run(amount, source, account, date, user || 'Me', isRecurring ? 1 : 0, frequency || null, nextOccurrence, notes || null, paymentMethod || null, id);
+    const result = stmt.run(amount, source, account, date, user || 'Me', isRecurring ? 1 : 0, frequency || null, nextOccurrence, notes || null, paymentMethod || null, tags ? JSON.stringify(tags) : '[]', id);
     
     if (result.changes > 0) {
       res.json({ success: true });
