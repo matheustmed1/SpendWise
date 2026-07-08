@@ -1079,7 +1079,7 @@ export default function App() {
         const res = await fetch(url, {
           method,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(editingEntryId ? expenseData : { ...expenseData, id: crypto.randomUUID() }),
+          body: JSON.stringify(expenseData),
         });
         if (res.ok) {
           await fetchAllData();
@@ -1111,7 +1111,7 @@ export default function App() {
         const res = await fetch(url, {
           method,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(editingEntryId ? incomeData : { ...incomeData, id: crypto.randomUUID() }),
+          body: JSON.stringify(incomeData),
         });
         if (res.ok) {
           await fetchAllData();
@@ -1140,7 +1140,7 @@ export default function App() {
         const res = await fetch(url, {
           method,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(editingEntryId ? investmentData : { ...investmentData, id: crypto.randomUUID() }),
+          body: JSON.stringify(investmentData),
         });
         if (res.ok) {
           await fetchAllData();
@@ -1157,6 +1157,17 @@ export default function App() {
         console.error('Failed to update budget', err);
       }
     }
+  };
+
+  const handleOpenAddModal = () => {
+    resetForm();
+    if (categories.length > 0) {
+      setCategory(categories[0].name);
+      const subs = subcategories.filter(s => s.categoryId === categories[0].id);
+      if (subs.length > 0) setSubcategory(subs[0].name);
+    }
+    setAccount(accounts[0]?.name || 'Bank');
+    setIsAdding(true);
   };
 
   const resetForm = () => {
@@ -4485,7 +4496,7 @@ export default function App() {
                         {language === 'en' ? 'AI Wizard' : 'Assistente IA'}
                       </button>
                       <button
-                        onClick={() => setIsAdding(true)}
+                        onClick={handleOpenAddModal}
                         className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-lg shadow-zinc-900/20 dark:shadow-zinc-100/10"
                       >
                         <Plus className="w-3.5 h-3.5" />
@@ -5125,7 +5136,7 @@ export default function App() {
         onClose={() => setIsSelectionModalOpen(false)} 
         onSelect={(type) => {
           handleTabChange(type);
-          setIsAdding(true);
+          handleOpenAddModal();
           setIsSelectionModalOpen(false);
         }}
         t={t}
