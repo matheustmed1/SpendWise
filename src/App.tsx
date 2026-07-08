@@ -508,6 +508,7 @@ export default function App() {
 
   // Form state
   const [amount, setAmount] = useState('');
+  const [amountError, setAmountError] = useState('');
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
   const [account, setAccount] = useState<Account>('Bank');
@@ -1053,7 +1054,15 @@ export default function App() {
 
   const handleAddEntry = async (e: FormEvent) => {
     e.preventDefault();
-    if (!amount || isNaN(Number(amount))) return;
+    if (!amount || isNaN(Number(amount))) {
+      setAmountError(language === 'en' ? 'Amount is required' : language === 'pt' ? 'Valor é obrigatório' : 'El monto es requerido');
+      return;
+    }
+    if (Number(amount) <= 0) {
+      setAmountError(language === 'en' ? 'Amount must be positive' : language === 'pt' ? 'O valor deve ser positivo' : 'El monto debe ser positivo');
+      return;
+    }
+    setAmountError('');
 
     if (activeTab === 'expenses' || activeTab === 'home') {
       const expenseData = {
@@ -1176,6 +1185,7 @@ export default function App() {
     setQuickSubcategoryName('');
     setEditingEntryId(null);
     setAmount('');
+    setAmountError('');
     setCategory('');
     setSubcategory('');
     setDescription('');
@@ -5798,10 +5808,13 @@ export default function App() {
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       placeholder="0.00"
-                      className="w-full pl-8 py-2 text-4xl font-light tracking-tight text-zinc-900 dark:text-zinc-100 border-b border-zinc-100 dark:border-zinc-800 focus:border-zinc-900 dark:focus:border-zinc-100 outline-none transition-colors placeholder:text-zinc-100 dark:placeholder:text-zinc-800"
+                      className={`w-full pl-8 py-2 text-4xl font-light tracking-tight text-zinc-900 dark:text-zinc-100 border-b ${amountError ? 'border-red-500 focus:border-red-500' : 'border-zinc-100 dark:border-zinc-800 focus:border-zinc-900 dark:focus:border-zinc-100'} outline-none transition-colors placeholder:text-zinc-100 dark:placeholder:text-zinc-800`}
                       required
                     />
                   </div>
+                  {amountError && (
+                    <p className="mt-2 text-xs font-medium text-red-500">{amountError}</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
