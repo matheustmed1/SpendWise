@@ -986,10 +986,10 @@ export default function App() {
           await fetchAllData();
           resetForm();
         } else {
-          const errorText = await res.text(); console.error('API Error:', res.status, errorText); alert('API Error: ' + errorText);
+          const errorText = await res.text(); console.error('API Error:', res.status, errorText); 
         }
       } catch (err) {
-        console.error('Failed to save expense', err); alert('Error: ' + err.message);
+        console.error('Failed to save expense', err); 
       }
     } else if (activeTab === 'income') {
       const incomeData = {
@@ -1019,10 +1019,10 @@ export default function App() {
           await fetchAllData();
           resetForm();
         } else {
-          const errorText = await res.text(); console.error('API Error:', res.status, errorText); alert('API Error: ' + errorText);
+          const errorText = await res.text(); console.error('API Error:', res.status, errorText); 
         }
       } catch (err) {
-        console.error('Failed to save income', err); alert('Error: ' + err.message);
+        console.error('Failed to save income', err); 
       }
     } else if (activeTab === 'investments') {
       const investmentData = {
@@ -1049,7 +1049,7 @@ export default function App() {
           await fetchAllData();
           resetForm();
         } else {
-          const errorText = await res.text(); console.error('API Error:', res.status, errorText); alert('API Error: ' + errorText);
+          const errorText = await res.text(); console.error('API Error:', res.status, errorText); 
         }
       } catch (err) {
         console.error('Failed to save investment', err);
@@ -3176,7 +3176,7 @@ export default function App() {
                 {editingEntryId ? t.edit : (language === 'en' ? 'New' : language === 'pt' ? 'Novo(a)' : 'Nuevo(a)')} {activeTab === 'expenses' || activeTab === 'home' ? t.expenses.slice(0, -1) : activeTab === 'income' ? t.income : activeTab === 'investments' ? t.investments.slice(0, -1) : t.budget}
               </h2>
               
-              <div className="space-y-6">
+              <form onSubmit={handleAddEntry} className="space-y-6">
                 <div>
                   <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block">
                     {activeTab === 'investments' ? t.initial : t.amount}
@@ -3365,13 +3365,13 @@ export default function App() {
                   <p className="mt-2 text-xs font-medium text-red-500">{submitError}</p>
                 )}
                 <button
-                  type="button" onClick={handleAddEntry}
+                  type="submit"
                   disabled={isSubmitting}
                   className="w-full py-4 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-2xl font-semibold shadow-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all active:scale-[0.98] mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? '...' : (editingEntryId ? t.save : t.addEntry)}
                 </button>
-              </div>
+              </form>
             </motion.div>
           </>
         )}
