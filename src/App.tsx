@@ -461,7 +461,6 @@ export default function App() {
   const [paymentMethod, setPaymentMethod] = useState('');
   const [investmentName, setInvestmentName] = useState('');
   const [investmentSymbol, setInvestmentSymbol] = useState('');
-  const [suggestedCategory, setSuggestedCategory] = useState<{category: string, subcategory: string} | null>(null);
   const [investmentTargetAmount, setInvestmentTargetAmount] = useState('');
   const [investmentTargetDate, setInvestmentTargetDate] = useState('');
   const [isRecurring, setIsRecurring] = useState(false);
@@ -745,18 +744,6 @@ export default function App() {
     }
   };
 
-  useEffect(() => {
-    if (description.length >= 3) {
-      const match = expenses.find(e => e.description.toLowerCase().includes(description.toLowerCase()));
-      if (match) {
-        setSuggestedCategory({ category: match.category, subcategory: match.subcategory || '' });
-      } else {
-        setSuggestedCategory(null);
-      }
-    } else {
-      setSuggestedCategory(null);
-    }
-  }, [description, expenses]);
 
   const handleSymbolChange = (value: string) => {
     const upperValue = value.toUpperCase();
@@ -765,7 +752,7 @@ export default function App() {
     if (upperValue.length > 0) {
       const filtered = COMMON_SYMBOLS.filter(s => 
         s.symbol.startsWith(upperValue) || 
-        s.name.toLowerCase().includes(value.toLowerCase())
+        (s.name || '').toLowerCase().includes(value.toLowerCase())
       ).slice(0, 5);
       setSymbolSuggestions(filtered);
       setShowSymbolSuggestions(filtered.length > 0);
@@ -957,11 +944,12 @@ export default function App() {
 
   const handleAddEntry = async (e: FormEvent) => {
     e.preventDefault();
-    if (!amount || isNaN(Number(amount))) {
+    const cleanAmount = amount.replace(',', '.');
+    if (!cleanAmount || isNaN(Number(cleanAmount))) {
       setAmountError(language === 'en' ? 'Amount is required' : language === 'pt' ? 'Valor é obrigatório' : 'El monto es requerido');
       return;
     }
-    if (Number(amount) <= 0) {
+    if (Number(cleanAmount) <= 0) {
       setAmountError(language === 'en' ? 'Amount must be positive' : language === 'pt' ? 'O valor deve ser positivo' : 'El monto debe ser positivo');
       return;
     }
@@ -969,7 +957,7 @@ export default function App() {
 
     if (activeTab === 'expenses' || activeTab === 'home') {
       const expenseData = {
-        amount: Number(amount),
+        amount: Number(cleanAmount),
         category,
         subcategory,
         account,
@@ -1002,7 +990,7 @@ export default function App() {
       }
     } else if (activeTab === 'income') {
       const incomeData = {
-        amount: Number(amount),
+        amount: Number(cleanAmount),
         source: source || 'General',
         account,
         date,
@@ -1036,8 +1024,8 @@ export default function App() {
       const investmentData = {
         name: investmentName || 'New Investment',
         symbol: investmentSymbol || null,
-        initialAmount: Number(amount),
-        currentValue: Number(amount), // Default current value to initial amount
+        initialAmount: Number(cleanAmount),
+        currentValue: Number(cleanAmount), // Default current value to initial amount
         targetAmount: investmentTargetAmount ? Number(investmentTargetAmount) : null,
         targetDate: investmentTargetDate || null,
         date,
@@ -1063,7 +1051,7 @@ export default function App() {
       }
     } else if (activeTab === 'budget') {
       try {
-        await handleUpdateBudget(category, subcategory, Number(amount));
+        await handleUpdateBudget(category, subcategory, Number(cleanAmount));
         resetForm();
       } catch (err) {
         console.error('Failed to update budget', err);
@@ -1233,28 +1221,6 @@ export default function App() {
     }
   };
 
-  const fetchLivePrice = async (id: string, symbol: string) => {
-    if (!symbol) return;
-    
-    setUpdatingInvestments(prev => ({ ...prev, [id]: true }));
-    
-    try {
-      const response = await fetch('/api/gemini/live-price', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol, currency })
-      });
-      const data = await response.json();
-      
-      if (data.price && data.price > 0) {
-        await handleUpdateInvestmentValue(id, data.price);
-      }
-    } catch (err) {
-      console.error('Failed to fetch live price', err);
-    } finally {
-      setUpdatingInvestments(prev => ({ ...prev, [id]: false }));
-    }
-  };
 
   const handleUpdateBudget = async (categoryName: string, subcategoryName: string, amount: number) => {
     try {
@@ -1809,9 +1775,9 @@ export default function App() {
 
   const groupedExpenses = useMemo(() => {
     const filtered = expenses.filter(e => {
-      const matchesSearch = e.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           e.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (e.subcategory && e.subcategory.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesSearch = (e.description || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           (e.category || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (e.subcategory && (e.subcategory || '').toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesCategory = filterCategory === 'All' || e.category === filterCategory;
       const matchesSubcategory = filterSubcategory === 'All' || e.subcategory === filterSubcategory;
       const matchesAccount = filterAccount === 'All' || e.account === filterAccount;
@@ -1831,7 +1797,7 @@ export default function App() {
 
   const groupedIncome = useMemo(() => {
     const filtered = income.filter(i => {
-      const matchesSearch = i.source.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (i.source || '').toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = filterCategory === 'All'; // Income doesn't have categories in the same way, but we could filter by source if we wanted. For now, just search.
       const matchesAccount = filterAccount === 'All' || i.account === filterAccount;
       const matchesDate = (!startDate || i.date >= startDate) && (!endDate || i.date <= endDate);
@@ -1876,7 +1842,6 @@ export default function App() {
     if (tab === 'investments') {
       investments.forEach(inv => {
         if (inv.symbol) {
-          fetchLivePrice(inv.id, inv.symbol);
         }
       });
     }
@@ -3339,400 +3304,30 @@ export default function App() {
                           />
                           <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
                         </div>
-                        <AnimatePresence>
-                          {showSourceDropdown && (
-                            <motion.div
-                              initial={{ opacity: 0, y: -10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -10 }}
-                              className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-xl shadow-xl z-[60] overflow-hidden max-h-48 overflow-y-auto no-scrollbar"
-                            >
-                              {Array.from(new Set([...income.map(i => i.source), ...categories.map(c => c.name)]))
-                                .filter(Boolean)
-                                .sort()
-                                .filter(src => !source || src?.toLowerCase().includes(source.toLowerCase()))
-                                .map(src => (
-                                <button
-                                  key={src}
-                                  type="button"
-                                  onClick={() => {
-                                    setSource(src as string);
-                                    setShowSourceDropdown(false);
-                                  }}
-                                  className="w-full px-4 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-between group border-b border-zinc-50 dark:border-zinc-800/50 last:border-0"
-                                >
-                                  <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{src}</span>
-                                  <ChevronRight className="w-3 h-3 text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors" />
-                                </button>
-                              ))}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                      <div className="relative order-3">
-                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block">Payment Method</label>
-                        <div className="relative">
-                          <input
-                              type="text"
-                              value={paymentMethod}
-                              onChange={(e) => {
-                                setPaymentMethod(e.target.value);
-                                setShowPaymentMethodDropdown(true);
-                              }}
-                              onFocus={() => setShowPaymentMethodDropdown(true)}
-                              onBlur={() => setTimeout(() => setShowPaymentMethodDropdown(false), 200)}
-                              placeholder="Bank Transfer, Cash..."
-                              className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-100 outline-none border border-transparent focus:border-zinc-200 dark:focus:border-zinc-700 transition-all placeholder:text-zinc-300 dark:placeholder:text-zinc-600"
-                            />
-                          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
-                        </div>
-                        <AnimatePresence>
-                            {showPaymentMethodDropdown && (
-                              <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-xl shadow-xl z-[60] overflow-hidden max-h-48 overflow-y-auto no-scrollbar"
-                              >
-                                {Array.from(new Set<string>(income.map(i => i.paymentMethod).filter((pm): pm is string => typeof pm === 'string'))).filter(pm => !paymentMethod || pm.toLowerCase().includes(paymentMethod.toLowerCase())).map((pm) => (
-                                  <button
-                                    key={pm}
-                                    type="button"
-                                    onClick={() => {
-                                      setPaymentMethod(pm as string);
-                                      setShowPaymentMethodDropdown(false);
-                                    }}
-                                    className="w-full px-4 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-between group border-b border-zinc-50 dark:border-zinc-800/50 last:border-0"
-                                  >
-                                    <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{pm}</span>
-                                    <ChevronRight className="w-3 h-3 text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors" />
-                                  </button>
-                                ))}
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      <div className="order-4">
-                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block">Notes</label>
-                        <input
-                            type="text"
-                            value={notes}
-                            onChange={(e) => setNotes(e.target.value)}
-                            placeholder="Additional details..."
-                            className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-100 outline-none border border-transparent focus:border-zinc-200 dark:focus:border-zinc-700 transition-all placeholder:text-zinc-300 dark:placeholder:text-zinc-600"
-                          />
+
                       </div>
                     </>
-                  ) : (
+                  ) : activeTab === 'investments' ? (
                     <>
                       <div className="order-1">
                         <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block">Investment Name</label>
-                        <input
-                          type="text"
-                          value={investmentName}
-                          onChange={(e) => setInvestmentName(e.target.value)}
-                          placeholder="e.g. Apple Stock"
-                          className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-100 outline-none border border-transparent focus:border-zinc-200 dark:focus:border-zinc-700 transition-all placeholder:text-zinc-300 dark:placeholder:text-zinc-600"
-                        />
+                        <input type="text" value={investmentName} onChange={(e) => setInvestmentName(e.target.value)} placeholder="e.g. S&P 500" className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-100 outline-none border border-transparent focus:border-zinc-200 dark:focus:border-zinc-700 transition-all" required />
                       </div>
                       <div className="order-2">
-                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block">Symbol (for live tracking)</label>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={investmentSymbol}
-                            onChange={(e) => handleSymbolChange(e.target.value)}
-                            placeholder="e.g. AAPL, BTC"
-                            className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-100 outline-none border border-transparent focus:border-zinc-200 dark:focus:border-zinc-700 transition-all placeholder:text-zinc-300 dark:placeholder:text-zinc-600"
-                          />
-                          <AnimatePresence>
-                            {showSymbolSuggestions && (
-                              <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-xl shadow-xl z-[60] overflow-hidden"
-                              >
-                                {symbolSuggestions.map((suggestion) => (
-                                  <button
-                                    key={suggestion.symbol}
-                                    type="button"
-                                    onClick={() => handleSelectSymbol(suggestion)}
-                                    className="w-full px-4 py-2 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-between group"
-                                  >
-                                    <div className="flex flex-col">
-                                      <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{suggestion.symbol}</span>
-                                      <span className="text-[10px] text-zinc-400">{suggestion.name}</span>
-                                    </div>
-                                    <ChevronRight className="w-3 h-3 text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors" />
-                                  </button>
-                                ))}
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
+                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block">Symbol</label>
+                        <input type="text" value={investmentSymbol} onChange={(e) => setInvestmentSymbol(e.target.value)} placeholder="e.g. SPY" className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-100 outline-none border border-transparent focus:border-zinc-200 dark:focus:border-zinc-700 transition-all" />
+                      </div>
+                      <div className="order-3">
+                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block">Target Amount</label>
+                        <input type="number" step="0.01" value={investmentTargetAmount} onChange={(e) => setInvestmentTargetAmount(e.target.value)} placeholder="0.00" className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-100 outline-none border border-transparent focus:border-zinc-200 dark:focus:border-zinc-700 transition-all" />
                       </div>
                       <div className="order-4">
-                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block">Target Amount</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={investmentTargetAmount}
-                          onChange={(e) => setInvestmentTargetAmount(e.target.value)}
-                          placeholder="Goal Amount"
-                          className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-100 outline-none border border-transparent focus:border-zinc-200 dark:focus:border-zinc-700 transition-all placeholder:text-zinc-300 dark:placeholder:text-zinc-600"
-                        />
-                      </div>
-                      <div className="order-5">
                         <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block">Target Date</label>
-                        <input
-                          type="date"
-                          value={investmentTargetDate}
-                          onChange={(e) => setInvestmentTargetDate(e.target.value)}
-                          className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-100 outline-none border border-transparent focus:border-zinc-200 dark:focus:border-zinc-700 transition-all"
-                        />
+                        <input type="date" value={investmentTargetDate} onChange={(e) => setInvestmentTargetDate(e.target.value)} className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-100 outline-none border border-transparent focus:border-zinc-200 dark:focus:border-zinc-700 transition-all" />
                       </div>
                     </>
-                  )}
-                  <div className={`relative z-[55] ${activeTab === 'income' ? 'order-2' : 'order-3'}`}>
-                    <div className="flex justify-between items-center mb-2">
-                      <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{t.account}</label>
-                      <div className="flex items-center gap-1.5">
-                        <div 
-                          className="w-2 h-2 rounded-full shadow-sm" 
-                          style={{ backgroundColor: accounts.find(a => a.name === account)?.color || '#cbd5e1' }} 
-                        />
-                        <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">{account}</span>
-                      </div>
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={account}
-                        onChange={(e) => {
-                          setAccount(e.target.value as Account);
-                          setShowAccountDropdown(true);
-                        }}
-                        onFocus={() => setShowAccountDropdown(true)}
-                        onBlur={() => setTimeout(() => setShowAccountDropdown(false), 200)}
-                        className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-100 outline-none border border-transparent focus:border-zinc-200 dark:focus:border-zinc-700 transition-all"
-                        placeholder="Bank Account, Cash..."
-                      />
-                      <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
-                    </div>
-                    <AnimatePresence>
-                      {showAccountDropdown && (
-                        <motion.div
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-xl shadow-xl z-[60] overflow-hidden max-h-48 overflow-y-auto no-scrollbar"
-                        >
-                          {[
-                            ...accounts.map(acc => ({ name: acc.name, color: acc.color })),
-                            ...Array.from(new Set([...expenses.map(e => e.account), ...income.map(i => i.account)]))
-                              .filter(a => !accounts.find(acc => acc.name === a))
-                              .map(a => ({ name: a, color: '#cbd5e1' }))
-                          ].filter(a => !account || a.name.toLowerCase().includes(account.toLowerCase())).map((acc) => (
-                            <button
-                              key={acc.name}
-                              type="button"
-                              onClick={() => {
-                                setAccount(acc.name as Account);
-                                setShowAccountDropdown(false);
-                              }}
-                              className="w-full px-4 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-between group border-b border-zinc-50 dark:border-zinc-800/50 last:border-0"
-                            >
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: acc.color }} />
-                                <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{acc.name}</span>
-                              </div>
-                              <ChevronRight className="w-3 h-3 text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors" />
-                            </button>
-                          ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                  ) : null}
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block">{t.date}</label>
-                    <input
-                      type="date"
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
-                      className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-100 outline-none border border-transparent focus:border-zinc-200 dark:focus:border-zinc-700 transition-all"
-                    />
-                  </div>
-                  <div className="relative z-[50]">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block">Who?</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={user}
-                        onChange={(e) => {
-                          setUser(e.target.value);
-                          setShowUserDropdown(true);
-                        }}
-                        onFocus={() => setShowUserDropdown(true)}
-                        onBlur={() => setTimeout(() => setShowUserDropdown(false), 200)}
-                        className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-100 outline-none border border-transparent focus:border-zinc-200 dark:focus:border-zinc-700 transition-all"
-                        placeholder="Person..."
-                      />
-                      <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
-                    </div>
-                    <AnimatePresence>
-                      {showUserDropdown && (
-                        <motion.div
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-xl shadow-xl z-[60] overflow-hidden max-h-48 overflow-y-auto no-scrollbar"
-                        >
-                          {[
-                            ...USERS,
-                            ...Array.from(new Set([...expenses.map(e => e.user), ...income.map(i => i.user)])).filter(u => !USERS.includes(u))
-                          ].filter(u => !user || u.toLowerCase().includes(user.toLowerCase())).map((u) => (
-                            <button
-                              key={u}
-                              type="button"
-                              onClick={() => {
-                                setUser(u);
-                                setShowUserDropdown(false);
-                              }}
-                              className="w-full px-4 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-between group border-b border-zinc-50 dark:border-zinc-800/50 last:border-0"
-                            >
-                              <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{u}</span>
-                              <ChevronRight className="w-3 h-3 text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors" />
-                            </button>
-                          ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </div>
-
-                {(activeTab === 'expenses' || activeTab === 'home' || activeTab === 'income') && (
-                  <div className="space-y-4">
-                    <div className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl space-y-4">
-                      <div className="flex items-center gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer flex-1">
-                          <input
-                            type="checkbox"
-                            checked={isRecurring}
-                            onChange={(e) => {
-                              setIsRecurring(e.target.checked);
-                              if (e.target.checked) setIsInstallment(false);
-                            }}
-                            className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-zinc-900 dark:focus:ring-zinc-100 bg-transparent"
-                          />
-                          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{t.recurring}</span>
-                        </label>
-                      </div>
-
-                      {isRecurring && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          className="space-y-4"
-                        >
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Frequency</label>
-                            <select
-                              value={frequency}
-                              onChange={(e) => setFrequency(e.target.value as Frequency)}
-                              className="w-full p-3 bg-white dark:bg-zinc-900 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-100 outline-none border border-transparent focus:border-zinc-200 dark:focus:border-zinc-700 transition-all"
-                            >
-                              <option value="Daily">Daily</option>
-                              <option value="Weekly">Weekly</option>
-                              <option value="Monthly">Monthly</option>
-                            </select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Next Occurrence</label>
-                            <input
-                              type="date"
-                              value={nextOccurrence}
-                              onChange={(e) => setNextOccurrence(e.target.value)}
-                              className="w-full p-3 bg-white dark:bg-zinc-900 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-100 outline-none border border-transparent focus:border-zinc-200 dark:focus:border-zinc-700 transition-all"
-                            />
-                          </div>
-                          
-                          {(activeTab === 'expenses' || activeTab === 'home' || activeTab === 'income') && (
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">
-                                {language === 'en' ? 'Total Number of Installments (Optional)' : language === 'pt' ? 'Número Total de Parcelas (Opcional)' : 'Número Total de Cuotas (Opcional)'}
-                              </label>
-                              <input
-                                type="number"
-                                min="0"
-                                placeholder={language === 'en' ? 'Leave empty for indefinite' : language === 'pt' ? 'Deixe vazio para indefinido' : 'Dejar vacío para indefinido'}
-                                value={installmentsCount}
-                                onChange={(e) => setInstallmentsCount(e.target.value)}
-                                className="w-full p-3 bg-white dark:bg-zinc-900 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-100 outline-none border border-transparent focus:border-zinc-200 dark:focus:border-zinc-700 transition-all"
-                              />
-                            </div>
-                          )}
-                        </motion.div>
-                      )}
-
-                      {isInstallment && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          className="space-y-2"
-                        >
-                          <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">{t.installmentsCount}</label>
-                          <input
-                            type="number"
-                            min="1"
-                            value={installmentsCount}
-                            onChange={(e) => setInstallmentsCount(e.target.value)}
-                            className="w-full p-3 bg-white dark:bg-zinc-900 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-100 outline-none border border-transparent focus:border-zinc-200 dark:focus:border-zinc-700 transition-all"
-                          />
-                        </motion.div>
-                      )}
-                    </div>
-
-                    {activeTab !== 'income' && (
-                      <div>
-                        <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block">{t.description}</label>
-                        <input
-                          type="text"
-                          value={description}
-                          onChange={(e) => setDescription(e.target.value)}
-                          placeholder="What was this for?"
-                          className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl text-sm font-medium text-zinc-900 dark:text-zinc-100 outline-none border border-transparent focus:border-zinc-200 dark:focus:border-zinc-700 transition-all placeholder:text-zinc-300 dark:placeholder:text-zinc-600"
-                        />
-                        <AnimatePresence>
-                          {suggestedCategory && (
-                            <motion.button
-                              initial={{ opacity: 0, y: -5, height: 0 }}
-                              animate={{ opacity: 1, y: 0, height: 'auto' }}
-                              exit={{ opacity: 0, y: -5, height: 0 }}
-                              type="button"
-                              onClick={() => {
-                                setCategory(suggestedCategory.category);
-                                if (suggestedCategory.subcategory) {
-                                  setSubcategory(suggestedCategory.subcategory);
-                                }
-                                setSuggestedCategory(null);
-                              }}
-                              className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent-500/10 text-accent-600 dark:text-accent-400 rounded-lg text-xs font-bold hover:bg-accent-500/20 transition-colors"
-                            >
-                              <Sparkles className="w-3 h-3" />
-                              Suggestion: {suggestedCategory.category}{suggestedCategory.subcategory ? ` > ${suggestedCategory.subcategory}` : ''}
-                            </motion.button>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 { (activeTab === 'expenses' || activeTab === 'home' || activeTab === 'income') && (
                   <div className="mt-4">
                     <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block">TAGS</label>
@@ -4116,7 +3711,6 @@ interface InvestmentItemProps {
   accounts: AccountInfo[];
   locale: string;
   isUpdating: boolean;
-  fetchLivePrice: (id: string, symbol: string) => void;
   isDarkMode: boolean;
 }
 
@@ -4127,8 +3721,7 @@ function InvestmentItem({
   formatCurrency, 
   accounts, 
   locale, 
-  isUpdating, 
-  fetchLivePrice,
+  isUpdating,
   isDarkMode
 }: InvestmentItemProps) {
   const startDate = new Date(inv.date).getTime();
@@ -4172,15 +3765,6 @@ function InvestmentItem({
           </div>
         </div>
         <div className="flex items-center gap-1 opacity-0 group-hover/inv:opacity-100 transition-all">
-          {inv.symbol && (
-            <button 
-              onClick={() => fetchLivePrice(inv.id, inv.symbol!)}
-              disabled={isUpdating}
-              className="p-2.5 text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors disabled:opacity-30"
-            >
-              <RefreshCw className={`w-4 h-4 ${isUpdating ? 'animate-spin' : ''}`} />
-            </button>
-          )}
           <button onClick={() => onEdit(inv)} className="p-2.5 text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
             <Edit2 className="w-4 h-4" />
           </button>
