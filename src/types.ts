@@ -33,6 +33,7 @@ export interface Expense {
   nextOccurrence?: string;
   isInstallment?: boolean;
   installmentsCount?: number;
+  tags?: string[];
 }
 
 export interface Income {
@@ -48,6 +49,7 @@ export interface Income {
   notes?: string;
   paymentMethod?: string;
   installmentsCount?: number;
+  tags?: string[];
 }
 
 export interface Budget {
