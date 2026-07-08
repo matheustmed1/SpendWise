@@ -942,15 +942,16 @@ export default function App() {
     setIsAdding(true);
   };
 
-  const handleAddEntry = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleAddEntry = async (e?: any) => {
+    if (e) e.preventDefault();
+    console.log('handleAddEntry called', activeTab, amount);
     const cleanAmount = amount.replace(',', '.');
     if (!cleanAmount || isNaN(Number(cleanAmount))) {
       setAmountError(language === 'en' ? 'Amount is required' : language === 'pt' ? 'Valor é obrigatório' : 'El monto es requerido');
       return;
     }
     if (Number(cleanAmount) <= 0) {
-      setAmountError(language === 'en' ? 'Amount must be positive' : language === 'pt' ? 'O valor deve ser positivo' : 'El monto debe ser positivo');
+      setAmountError(language === 'en' ? 'Amount must be positive' : language === 'pt' ? 'O valor deve ser positive' : 'El monto debe ser positivo');
       return;
     }
     setAmountError('');
@@ -984,9 +985,11 @@ export default function App() {
         if (res.ok) {
           await fetchAllData();
           resetForm();
+        } else {
+          const errorText = await res.text(); console.error('API Error:', res.status, errorText); alert('API Error: ' + errorText);
         }
       } catch (err) {
-        console.error('Failed to save expense', err);
+        console.error('Failed to save expense', err); alert('Error: ' + err.message);
       }
     } else if (activeTab === 'income') {
       const incomeData = {
@@ -1007,7 +1010,6 @@ export default function App() {
       try {
         const url = editingEntryId ? `/api/income/${editingEntryId}` : '/api/income';
         const method = editingEntryId ? 'PUT' : 'POST';
-
         const res = await fetch(url, {
           method,
           headers: { 'Content-Type': 'application/json' },
@@ -1016,9 +1018,11 @@ export default function App() {
         if (res.ok) {
           await fetchAllData();
           resetForm();
+        } else {
+          const errorText = await res.text(); console.error('API Error:', res.status, errorText); alert('API Error: ' + errorText);
         }
       } catch (err) {
-        console.error('Failed to save income', err);
+        console.error('Failed to save income', err); alert('Error: ' + err.message);
       }
     } else if (activeTab === 'investments') {
       const investmentData = {
@@ -1036,7 +1040,6 @@ export default function App() {
       try {
         const url = editingEntryId ? `/api/investments/${editingEntryId}` : '/api/investments';
         const method = editingEntryId ? 'PUT' : 'POST';
-
         const res = await fetch(url, {
           method,
           headers: { 'Content-Type': 'application/json' },
@@ -1045,6 +1048,8 @@ export default function App() {
         if (res.ok) {
           await fetchAllData();
           resetForm();
+        } else {
+          const errorText = await res.text(); console.error('API Error:', res.status, errorText); alert('API Error: ' + errorText);
         }
       } catch (err) {
         console.error('Failed to save investment', err);
@@ -1058,7 +1063,6 @@ export default function App() {
       }
     }
   };
-
   const handleOpenAddModal = () => {
     resetForm();
     if (categories.length > 0) {
@@ -1262,7 +1266,8 @@ export default function App() {
   };
 
   const handleDragOverMetric = (e: DragEvent, index: number) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    console.log('handleAddEntry called', activeTab, amount);
     if (draggedMetricIndex === null || draggedMetricIndex === index) return;
     
     const newMetrics = [...pinnedMetrics];
@@ -3171,7 +3176,7 @@ export default function App() {
                 {editingEntryId ? t.edit : (language === 'en' ? 'New' : language === 'pt' ? 'Novo(a)' : 'Nuevo(a)')} {activeTab === 'expenses' || activeTab === 'home' ? t.expenses.slice(0, -1) : activeTab === 'income' ? t.income : activeTab === 'investments' ? t.investments.slice(0, -1) : t.budget}
               </h2>
               
-              <form onSubmit={handleAddEntry} className="space-y-6">
+              <div className="space-y-6">
                 <div>
                   <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block">
                     {activeTab === 'investments' ? t.initial : t.amount}
@@ -3180,8 +3185,8 @@ export default function App() {
                     <span className="absolute left-0 top-1/2 -translate-y-1/2 text-3xl font-light text-zinc-300 dark:text-zinc-700">{currencySymbol}</span>
                     <input
                       autoFocus
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       placeholder="0.00"
@@ -3345,7 +3350,8 @@ export default function App() {
                       onChange={(e) => setTagInput(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && tagInput.trim()) {
-                          e.preventDefault();
+                          if (e) e.preventDefault();
+    console.log('handleAddEntry called', activeTab, amount);
                           if (!tags.includes(tagInput.trim())) setTags([...tags, tagInput.trim()]);
                           setTagInput('');
                         }
@@ -3359,13 +3365,13 @@ export default function App() {
                   <p className="mt-2 text-xs font-medium text-red-500">{submitError}</p>
                 )}
                 <button
-                  type="submit"
+                  type="button" onClick={handleAddEntry}
                   disabled={isSubmitting}
                   className="w-full py-4 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-2xl font-semibold shadow-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all active:scale-[0.98] mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? '...' : (editingEntryId ? t.save : t.addEntry)}
                 </button>
-              </form>
+              </div>
             </motion.div>
           </>
         )}
